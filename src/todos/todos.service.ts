@@ -1,69 +1,34 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Todo } from './interfaces/todo.interface';
 import { CreateTodoDto } from './dto/create-todo.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TodoEntity } from './entities/todo.entity';
+import { Repository } from 'typeorm';
+import { Observable, from } from 'rxjs';
 
 @Injectable()
 export class TodosService {
-  todos: Todo[] = [
-    {
-      id: 1,
-      title: 'My first NestJS App',
-      description: 'Create Todo App',
-      done: true,
-    },
-    {
-      id: 2,
-      title: 'Migrate BonAlim\' to NestJS',
-      description: 'I prefer JS than PHP',
-      done: false,
-    },
-  ];
+  constructor(
+    @InjectRepository(TodoEntity) private readonly TodoRepository: Repository<TodoEntity>
+  ) {}
 
-  getAll(): Todo[] {
-    return this.todos;
+  getAll(): Observable<Todo[]> {
+    return from(this.TodoRepository.find());
   }
 
-  getById(id: string) {
-    return this.todos.find(todo => todo.id === +id);
+  getById(id: string): Observable<Todo> {
+    return from(this.TodoRepository.findOne(id));
   }
 
-  create(todo: CreateTodoDto) {
-    this.todos = [...this.todos, todo];
+  create(todo: CreateTodoDto): Observable<Todo> {
+    return from(this.TodoRepository.save(todo));
   }
 
-  update(id: string, todo: Todo) {
-    // Retrieve the todo to update
-    const todoToUpdate = this.todos.find(todo => todo.id === +id);
-    if(!todoToUpdate) {
-      return new NotFoundException('Didn\'t find this todo.');
-    }
-
-    // Get data
-    if(todo.title) {
-      todoToUpdate.title = todo.title;
-    }
-
-    if(todo.description) {
-      todoToUpdate.description = todo.description;
-    }
-
-    if(todo.hasOwnProperty('done')) {
-      todoToUpdate.done = todo.done;
-    }
-
-    // Apply modifications
-    const updatedTodos = this.todos.map(t => t.id !== +id ? t : todoToUpdate)
-    this.todos = [...updatedTodos];
-    return { updatedTodo: 1, todo: todoToUpdate};
+  update(id: string, todo: Todo): Observable<any> {
+    return from(this.TodoRepository.update(id, todo));
   }
 
-  delete(id: string) {
-    const nbOfTodosBeforeDelete = this.todos.length;
-    this.todos.filter(t => t.id !== +id);
-    if(this.todos.length < nbOfTodosBeforeDelete) {
-      return { deletedTodos: 1, nbTodos: this.todos.length };
-    } else {
-      return { deletedTodos: 0, nbTodos: this.todos.length};
-    }
+  delete(id: string): Observable<any> {
+    return from(this.TodoRepository.delete(id));
   }
 }
